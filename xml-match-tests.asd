@@ -1,0 +1,47 @@
+;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: CL-USER -*-
+
+;;; Copyright (c) 2010 Ivan Shvedunov. All rights reserved.
+
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions
+;;; are met:
+;;;
+;;;   * Redistributions of source code must retain the above copyright
+;;;     notice, this list of conditions and the following disclaimer.
+;;;
+;;;   * Redistributions in binary form must reproduce the above
+;;;     copyright notice, this list of conditions and the following
+;;;     disclaimer in the documentation and/or other materials
+;;;     provided with the distribution.
+;;;
+;;; THIS SOFTWARE IS PROVIDED BY THE AUTHOR 'AS IS' AND ANY EXPRESSED
+;;; OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+;;; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+;;; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+;;; DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+;;; GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+;;; WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+;;; NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+(defpackage #:xml-match.system
+  (:use #:cl #:asdf))
+
+(in-package :xml-match.system)
+
+(defsystem xml-match-tests
+  :description "Another XML pattern matcher"
+  :author "Ivan Shvedunov <ivan4th@gmail.com>"
+  :version "0.1"
+  :serial t
+  :depends-on (:cxml-stp :alexandria :iterate :xml-match :fiveam)
+  :components ((:file "xml-match-tests")))
+
+(defmethod operation-done-p ((o test-op) (c (eql (find-system :xml-match-tests))))
+  nil)
+
+(defmethod perform ((o test-op) (c (eql (find-system :xml-match-tests))))
+  (funcall (intern (string '#:run!) '#:fiveam)
+           (intern (string '#:xml-match) '#:xml-match-tests)))

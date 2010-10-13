@@ -1,0 +1,13 @@
+XML matcher for cxml-stp.
+
+CL-USER> (xml-match:xml-match '(:a :href ?x *) (cxml:parse-rod "<a href='zzz'>fff</a>" (stp:make-builder)))
+((?X . "zzz") (T . T))
+
+CL-USER> (xml-match:xml-match 
+          '(:ul :class ?class (:* (:li (:img :src ?x))))
+          (cxml:parse-rod
+           "<ul class='imglist'><li><img src='img1.gif'/></li><li><img src='img2.gif'/></li></ul>"
+           (stp:make-builder)))
+((?X "img1.gif" "img2.gif") (?CLASS . "imglist") (T . T))
+
+For more examples, see xml-match-tests.lisp.
