@@ -70,6 +70,7 @@
           (collect (cons name
                          (labels ((convert-value (v)
                                     (etypecase v
+                                      (null "")
                                       (string v)
                                       (stp:element
                                          (with-output-to-string (out)
@@ -250,6 +251,27 @@
   (verify-match '(:div (:+ (:img :src ?src)))
                 "<div><img src='a.jpg'/><img src='b.jpg'/><img src='c.jpg'/></div>"
                 '((?src "a.jpg" "b.jpg" "c.jpg")))
+    ;; non-greedy 'everything' / repetition
+  (verify-match '(:div (:+bind :**? ?x) (:+bind (:+ (:p *)) ?y))
+                "<div>abc<p>q</p><p>r</p><p>s</p></div>"
+                '((?y . "<p>q</p><p>r</p><p>s</p>")
+                  (?x . "abc")))
+  (verify-match '(:div (:+bind (:*? (:p *)) ?x) (:+bind (:+ (:p :class "z" *)) ?y))
+                "<div><p>a</p><p>q</p><p class='z'>r</p><p class='z'>s</p></div>"
+                '((?y . "<p class=\"z\">r</p><p class=\"z\">s</p>")
+                  (?x . "<p>a</p><p>q</p>")))
+  (verify-match '(:div (:+bind (:*? (:p *)) ?x) (:+bind (:+ (:p :class "z" *)) ?y))
+                "<div><p class='z'>q</p><p class='z'>r</p><p class='z'>s</p></div>"
+                '((?y . "<p class=\"z\">q</p><p class=\"z\">r</p><p class=\"z\">s</p>")
+                  (?x . "")))
+  (verify-match '(:div (:+bind (:+? (:p *)) ?x) (:+bind (:+ (:p :class "z" *)) ?y))
+                "<div><p>a</p><p>q</p><p class='z'>r</p><p class='z'>s</p></div>"
+                '((?y . "<p class=\"z\">r</p><p class=\"z\">s</p>")
+                  (?x . "<p>a</p><p>q</p>")))
+  (verify-match '(:div (:+bind (:+? (:p *)) ?x) (:+bind (:+ (:p :class "z" *)) ?y))
+                "<div><p class='z'>q</p><p class='z'>r</p><p class='z'>s</p></div>"
+                '((?y . "<p class=\"z\">r</p><p class=\"z\">s</p>")
+                  (?x . "<p class=\"z\">q</p>")))
   ;; if the same variable is used both inside and outside repetition,
   ;; the value used outside must occur among values produced by the binding
   ;; inside repetition

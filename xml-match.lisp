@@ -132,10 +132,12 @@
           ((and (symbolp pattern) (aliased-pattern pattern))
            (parse-sub (aliased-pattern pattern)))
           ((eq pattern '*) (make-instance 'everything))
+          ((eq pattern :**?) (make-instance 'non-greedy-everything))
           ((stringp pattern) (make-instance 'text :text pattern))
           ((and (proper-list-p pattern)
                 (symbolp (first pattern))
                 (not (eq (first pattern) '*))
+                (not (eq (first pattern) :**?))
                 (not (variable-p (first pattern)))
                 (not (aliased-pattern (first pattern))))
            (case (first pattern)
@@ -166,8 +168,14 @@
              (:*
                 (make-instance 'greedy-repetition
                                :content-pattern (parse-sub (rest pattern))))
+             (:*?
+                (make-instance 'non-greedy-repetition
+                               :content-pattern (parse-sub (rest pattern))))
              (:+
                 (make-instance 'greedy-repetition-no-zero
+                               :content-pattern (parse-sub (rest pattern))))
+             (:+?
+                (make-instance 'non-greedy-repetition-no-zero
                                :content-pattern (parse-sub (rest pattern))))
              ((:+rx :+erx)
                 (unless (and (stringp (second pattern))
@@ -417,6 +425,14 @@
       (or (funcall next-fn nil bindings)
           (funcall next-fn node bindings)))))
 
+(defclass non-greedy-everything (pattern) ())
+
+(defmethod create-matcher ((pattern non-greedy-everything) next-fn)
+  (matcher-closure pattern everything (node bindings)
+    (iter (for from-node initially node then (next-sibling from-node))
+          (while from-node)
+          (thereis (funcall next-fn from-node bindings)))))
+
 (defclass bind (compound-pattern)
   ((variable :accessor variable-of :initarg :variable)))
 
@@ -565,6 +581,24 @@
             (*rep-saved-bindings* bindings))
         (funcall inner-closure node bindings)))))
 
+(defclass non-greedy-repetition (compound-pattern) ())
+
+(defmethod create-matcher ((pattern non-greedy-repetition) next-fn)
+  (let* ((content-matcher nil)
+         (inner-closure
+          (matcher-closure pattern non-greedy-repetition-inner (node bindings)
+            (setf *rep-accumulated-bindings*
+                  (collect-added-bindings bindings *rep-saved-bindings*
+                                          *rep-accumulated-bindings*))
+            (or (funcall next-fn node (append *rep-accumulated-bindings*
+                                              *rep-saved-bindings*))
+                (funcall content-matcher node *rep-saved-bindings*)))))
+    (setf content-matcher (create-matcher (content-pattern-of pattern) inner-closure))
+    (matcher-closure pattern greedy-repetition (node bindings)
+      (let ((*rep-accumulated-bindings* '())
+            (*rep-saved-bindings* bindings))
+        (funcall inner-closure node bindings)))))
+
 (defclass greedy-repetition-no-zero (compound-pattern) ())
 
 (defmethod create-matcher ((pattern greedy-repetition-no-zero) next-fn)
@@ -578,6 +612,24 @@
                             (or (funcall content-matcher node *rep-saved-bindings*)
                                 (funcall next-fn node (append *rep-accumulated-bindings*
                                                               *rep-saved-bindings*))))))
+    (matcher-closure pattern greedy-repetition (node bindings)
+      (let ((*rep-accumulated-bindings* '())
+            (*rep-saved-bindings* bindings))
+        (funcall content-matcher node bindings)))))
+
+(defclass non-greedy-repetition-no-zero (compound-pattern) ())
+
+(defmethod create-matcher ((pattern non-greedy-repetition-no-zero) next-fn)
+  (let (content-matcher)
+    (setf content-matcher
+          (create-matcher (content-pattern-of pattern)
+                          (matcher-closure pattern repetition (node bindings)
+                            (setf *rep-accumulated-bindings*
+                                  (collect-added-bindings bindings *rep-saved-bindings*
+                                                          *rep-accumulated-bindings*))
+                            (or (funcall next-fn node (append *rep-accumulated-bindings*
+                                                              *rep-saved-bindings*))
+                                (funcall content-matcher node *rep-saved-bindings*)))))
     (matcher-closure pattern greedy-repetition (node bindings)
       (let ((*rep-accumulated-bindings* '())
             (*rep-saved-bindings* bindings))
